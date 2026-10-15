@@ -1,0 +1,11 @@
+# Rust build artifacts
+target/
+
+# Local reference checkout
+truce-repo/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*~

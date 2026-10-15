@@ -1,0 +1,9 @@
+uuid = "0931457c-bc27-4e2c-bc2c-45c2e3878a9f"
+name = "Look at that!"
+comment = "Extended 68.75ms lookahead for punchy transients"
+default = false
+
+[params]
+lookahead = 68.75
+amount = 50.0
+gain = 0.0

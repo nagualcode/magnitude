@@ -1,0 +1,24 @@
+schema_version = 2
+target_triple = "aarch64-apple-darwin"
+profile = "release"
+
+[[bundle]]
+plugin_crate = "gersic-pressure"
+plugin_name = "Gersic Pressure"
+plugin_bundle_id = "gersic-pressure"
+format = "clap"
+filename = "Gersic Pressure.clap"
+
+[[bundle]]
+plugin_crate = "gersic-pressure"
+plugin_name = "Gersic Pressure"
+plugin_bundle_id = "gersic-pressure"
+format = "vst3"
+filename = "Gersic Pressure.vst3"
+
+[[bundle]]
+plugin_crate = "gersic-pressure"
+plugin_name = "Gersic Pressure"
+plugin_bundle_id = "gersic-pressure"
+format = "au2"
+filename = "Gersic Pressure.component"

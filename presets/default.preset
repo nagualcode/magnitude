@@ -1,0 +1,9 @@
+uuid = "1d643b80-03ef-4aa3-80a9-6faa05104e3d"
+name = "Default"
+comment = "Standard factory default setting"
+default = true
+
+[params]
+lookahead = 50.0
+amount = 25.0
+gain = 0.0

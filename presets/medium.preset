@@ -1,0 +1,9 @@
+uuid = "bbde11f9-79e7-4998-97b6-0a204ff94419"
+name = "Medium Compression"
+comment = "Balanced upward density for full mixes"
+default = false
+
+[params]
+lookahead = 0.0
+amount = 50.0
+gain = 0.0

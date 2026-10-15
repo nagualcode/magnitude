@@ -1,0 +1,9 @@
+uuid = "7304b23d-fa67-46e4-aa28-bd5323a5f3b3"
+name = "Heavy Compression"
+comment = "Dense compression lifting low-level details"
+default = false
+
+[params]
+lookahead = 0.0
+amount = 73.75
+gain = 0.0

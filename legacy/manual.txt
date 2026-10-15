@@ -1,0 +1,2 @@
+Pressure Mastering Compressor uses a technique called upward compression; it increases the level of quiet portions in a mix without reducing the level of attack transients like a traditional compressor.
+There are just 3 parameters: Amount of compression, look-ahead, and gain control.

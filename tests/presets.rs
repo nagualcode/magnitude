@@ -1,0 +1,76 @@
+//! Factory preset validation tests for Gersic Pressure.
+
+use std::collections::HashSet;
+use std::path::Path;
+
+use gersic_pressure::GersicPressureParams;
+use truce_build::presets::{ParamNameMap, read_param_annotations, read_presets_dir};
+use truce_params::Params;
+use truce_utils::state::deserialize_state;
+
+fn library() -> Vec<truce_build::presets::AuthoredPreset> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("presets");
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let annotations = read_param_annotations(
+        &truce_build::target_dir(&workspace_root)
+            .join("lv2-meta")
+            .join("gersic-pressure"),
+    );
+    let names = ParamNameMap::from_annotations(&annotations);
+    assert!(
+        !names.is_empty(),
+        "param sidecars missing - build the crate first"
+    );
+    read_presets_dir(&dir, false, Some(&names)).expect("factory preset library parses")
+}
+
+#[test]
+fn library_has_one_default_and_unique_names() {
+    let presets = library();
+    assert_eq!(presets.len(), 10, "Expected all 10 original factory presets");
+    assert_eq!(presets.iter().filter(|p| p.meta.default).count(), 1, "Exactly one default preset");
+
+    let names: HashSet<&str> = presets.iter().map(|p| p.meta.name.as_str()).collect();
+    assert_eq!(names.len(), presets.len(), "duplicate preset display name");
+}
+
+#[test]
+fn presets_reference_real_params_within_range() {
+    let params = GersicPressureParams::default();
+    let ids: HashSet<u32> = params.param_infos().iter().map(|i| i.id).collect();
+
+    for preset in library() {
+        assert!(!preset.params.is_empty(), "{}: empty preset", preset.stem);
+        for &(id, value) in &preset.params {
+            assert!(
+                ids.contains(&id),
+                "{}: param id {id} does not exist",
+                preset.stem
+            );
+            assert!(value.is_finite());
+        }
+
+        params.restore_values(&preset.params);
+        let (read_ids, read_values) = params.collect_values();
+        for &(id, authored) in &preset.params {
+            let idx = read_ids.iter().position(|&r| r == id).unwrap();
+            let restored = read_values[idx];
+            assert!(
+                (restored - authored).abs() < 1e-4,
+                "{}: param {id} = {authored} came back as {restored} (out of range?)",
+                preset.stem
+            );
+        }
+    }
+}
+
+#[test]
+fn presets_round_trip_through_state_envelope() {
+    const TEST_HASH: u64 = 0x5eed_cafe;
+    for preset in library() {
+        let blob = preset.state_blob(TEST_HASH);
+        let state = deserialize_state(&blob, TEST_HASH).expect("envelope parses");
+        assert_eq!(state.params, preset.params, "{}", preset.stem);
+        assert_eq!(state.extra.is_some(), !preset.extra.is_empty());
+    }
+}

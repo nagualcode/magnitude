@@ -1,0 +1,9 @@
+uuid = "8f1093dc-4f4f-4ae2-9901-ef9c904640a4"
+name = "Number Nine Number Nine"
+comment = "50ms lookahead with moderate 33% parallel compression"
+default = false
+
+[params]
+lookahead = 50.0
+amount = 33.0
+gain = 0.0

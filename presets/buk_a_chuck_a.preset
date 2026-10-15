@@ -1,0 +1,9 @@
+uuid = "118f39c8-70f9-473e-811d-3ac5619bd84a"
+name = "Buk a Chuck a"
+comment = "70ms lookahead with strong upward lift for rhythmic grooves"
+default = false
+
+[params]
+lookahead = 70.0
+amount = 72.5
+gain = 0.0

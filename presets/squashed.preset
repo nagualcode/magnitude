@@ -1,0 +1,9 @@
+uuid = "9bbbf9c0-3c48-4ad2-aa3d-603376206fb4"
+name = "Squashed"
+comment = "Maximum upward compression with full wet parallel mix"
+default = false
+
+[params]
+lookahead = 0.0
+amount = 100.0
+gain = 0.0

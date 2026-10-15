@@ -1,0 +1,9 @@
+uuid = "3a26cde7-52e1-4d35-97b1-597d8b0162db"
+name = "Light Compression"
+comment = "Gentle upward compression with zero latency"
+default = false
+
+[params]
+lookahead = 0.0
+amount = 26.25
+gain = 0.0

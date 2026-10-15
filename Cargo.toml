@@ -1,0 +1,57 @@
+[package]
+name = "gersic-pressure"
+version = "1.0.0"
+edition = "2024"
+authors = ["Jeremy Gersic", "Tom Gersic", "nagualcode"]
+description = "Faithful recreation of Tom & Jeremy Gersic's iconic PRESSURE Upward Compressor with Truce audio framework"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/nagualcode/gersicpressurebornagain"
+keywords = ["audio", "plugin", "vst", "clap", "compressor"]
+categories = ["multimedia::audio"]
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[[bin]]
+name = "gersic-pressure-standalone"
+path = "src/main.rs"
+required-features = ["standalone"]
+
+[features]
+default = ["clap", "vst3", "au", "standalone"]
+clap = ["dep:truce-clap", "dep:clap-sys"]
+vst3 = ["dep:truce-vst3"]
+vst2 = ["dep:truce-vst2"]
+lv2 = ["dep:truce-lv2"]
+aax = ["dep:truce-aax"]
+au = ["dep:truce-au"]
+standalone = ["dep:truce-standalone"]
+shell = ["truce/shell"]
+rt-paranoid = ["truce/rt-paranoid"]
+
+[dependencies]
+truce = { version = "6.3" }
+truce-core = { version = "6.3" }
+truce-params = { version = "6.3" }
+truce-gui-types = { version = "6.3" }
+truce-gui = { version = "6.3", features = ["cpu"] }
+truce-loader = { version = "6.3" }
+truce-clap = { version = "6.3", optional = true }
+truce-vst3 = { version = "6.3", optional = true }
+truce-vst2 = { version = "6.3", optional = true }
+truce-au = { version = "6.3", optional = true }
+truce-lv2 = { version = "6.3", optional = true }
+truce-aax = { version = "6.3", optional = true }
+truce-standalone = { version = "6.3", features = ["gui"], optional = true }
+clap-sys = { version = "0.5", optional = true }
+
+[dev-dependencies]
+truce-test = { version = "6.3" }
+truce-driver = { version = "6.3" }
+truce-build = { version = "6.3" }
+truce-utils = { version = "6.3" }
+hound = "3"
+
+[profile.shell]
+inherits = "release"

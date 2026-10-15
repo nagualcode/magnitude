@@ -1,0 +1,20 @@
+[vendor]
+name = "Gersic / Rupert Neve Engineering"
+id = "com.nagualcode"
+url = "https://github.com/nagualcode/gersicpressurebornagain"
+au_manufacturer = "Grsc"
+
+[[plugin]]
+name = "Gersic Pressure"
+bundle_id = "gersic-pressure"
+crate = "gersic-pressure"
+category = "effect"
+fourcc = "PR3S"
+au3_subtype = "PR3S"
+au_tag = "Effects"
+aax_category = "Dynamics"
+vst3_subcategory = "Dynamics"
+description = "PRESSURE Upward Compressor - Recreated with Rupert Neve sound engineering precision"
+windows_icon = "truce-repo/static/truce-minimal.ico"
+macos_icon = "truce-repo/static/truce-minimal.icns"
+ios_icon_set = "truce-repo/static/truce-minimal.appiconset"

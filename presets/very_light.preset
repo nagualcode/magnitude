@@ -1,0 +1,9 @@
+uuid = "f909e306-a885-41bc-8883-e9765ddcd339"
+name = "Very Light Compression"
+comment = "Subtle dynamic lift for delicate acoustic mixes"
+default = false
+
+[params]
+lookahead = 0.0
+amount = 12.5
+gain = 0.0

@@ -1,0 +1,9 @@
+uuid = "dcf3b7a5-210c-43de-bfee-7094c6d15249"
+name = "All the way up"
+comment = "Ultra-clean mastering lift with low compression amount"
+default = false
+
+[params]
+lookahead = 0.0
+amount = 8.75
+gain = 0.0
