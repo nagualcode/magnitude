@@ -1,8 +1,8 @@
 [vendor]
-name = "Gersic / Rupert Neve Engineering"
-id = "com.nagualcode"
+name = "Jardim Sonoro"
+id = "com.jardimsonoro"
 url = "https://github.com/nagualcode/gersicpressurebornagain"
-au_manufacturer = "Grsc"
+au_manufacturer = "Jrdm"
 
 [[plugin]]
 name = "Gersic Pressure"

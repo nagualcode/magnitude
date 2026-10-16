@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>Gersic Pressure</string>
     <key>CFBundleIdentifier</key>
-    <string>com.truce.gersic-pressure.component</string>
+    <string>com.jardimsonoro.gersic-pressure.component</string>
     <key>CFBundleName</key>
     <string>Gersic Pressure</string>
     <key>CFBundlePackageType</key>
@@ -20,9 +20,9 @@
             <key>subtype</key>
             <string>PR3S</string>
             <key>manufacturer</key>
-            <string>Trce</string>
+            <string>Jrdm</string>
             <key>name</key>
-            <string>Truce: Gersic Pressure</string>
+            <string>Jardim Sonoro: Gersic Pressure</string>
             <key>description</key>
             <string>Gersic Pressure</string>
             <key>version</key>
