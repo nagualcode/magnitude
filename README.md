@@ -104,6 +104,14 @@ cargo run --release --example analyze
 
 ---
 
+## Validation
+
+Every release is checked with `cargo truce validate`: **auval** (AU v2 and v3), **pluginval** (VST3) and **clap-validator 0.4.1** (CLAP: 37 passed, 7 skipped for extensions the plugin doesn't implement).
+
+clap-validator found two spec violations in Truce 6.3.0's CLAP wrapper: `clap_host_latency::changed` was called while the plugin was active, and state/preset loads didn't request a parameter rescan. They are fixed in a vendored copy (`vendor/truce-clap`, see `PATCHED.md`) that the build uses through `[patch.crates-io]`, until the fixes land upstream.
+
+---
+
 ## Factory presets
 
 All 10 original presets are included. They contain only the three original controls, so they load with the v2 extras at their defaults (Color 100 %, Link 0 %, SC HPF off), which is the original sound.
@@ -155,6 +163,7 @@ cargo truce package --formats clap,vst3,au2 --user --host-only   # .pkg installe
 ├── tests/presets.rs      # preset integrity tests
 ├── screenshots/          # GUI snapshot baseline
 ├── assets/               # plugin icons
+├── vendor/truce-clap/    # Truce CLAP wrapper with two spec fixes (see PATCHED.md)
 └── legacy/               # original 2006 artifacts (DLL, schematic, manual)
 ```
 

@@ -1,6 +1,6 @@
 [package]
 name = "gersic-pressure"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2024"
 authors = ["Jeremy Gersic", "Tom Gersic", "nagualcode"]
 description = "Recreation and modernisation of Tom & Jeremy Gersic's 2006 PRESSURE upward compressor, built with Truce"
@@ -55,3 +55,9 @@ hound = "3"
 
 [profile.shell]
 inherits = "release"
+
+# truce-clap 6.3.0 calls `clap_host_latency::changed` while the plugin is
+# active, which the CLAP spec forbids (clap-validator fails). The vendored
+# copy only calls `request_restart` in that case. Drop once fixed upstream.
+[patch.crates-io]
+truce-clap = { path = "vendor/truce-clap" }

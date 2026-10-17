@@ -112,7 +112,7 @@ impl Ui {
         painter.text(
             pos2(header.right() - 10.0, header.center().y),
             Align2::RIGHT_CENTER,
-            concat!("upward compressor · v", env!("CARGO_PKG_VERSION")),
+            "upward compressor",
             FontId::proportional(10.0),
             TEXT_DIM,
         );

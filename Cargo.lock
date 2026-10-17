@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "gersic-pressure"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "clap-sys",
  "egui",
@@ -2099,8 +2099,6 @@ dependencies = [
 [[package]]
 name = "truce-clap"
 version = "6.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0bda9bd8173818a46b34ba72fe03be0e1dcc17df1d6a21447a712c311d7809f"
 dependencies = [
  "clap-sys",
  "crossbeam-queue",
