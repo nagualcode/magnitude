@@ -1,7 +1,7 @@
 [vendor]
 name = "Jardim Sonoro"
 id = "com.jardimsonoro"
-url = "https://github.com/nagualcode/gersicpressurebornagain"
+url = "https://github.com/nagualcode/magnitude"
 au_manufacturer = "Jrdm"
 
 [[plugin]]

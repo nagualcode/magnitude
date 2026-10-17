@@ -2,11 +2,11 @@
 name = "magnitude"
 version = "2.1.0"
 edition = "2024"
-authors = ["Jeremy Gersic", "Tom Gersic", "nagualcode"]
+authors = ["nagualcode"]
 description = "Magnitude: upward mastering compressor descended from Tom & Jeremy Gersic's 2006 PRESSURE, built with Truce"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/nagualcode/gersicpressurebornagain"
+repository = "https://github.com/nagualcode/magnitude"
 keywords = ["audio", "plugin", "vst", "clap", "compressor"]
 categories = ["multimedia::audio"]
 
