@@ -797,7 +797,7 @@ unsafe extern "C" fn clap_plugin_on_main_thread<P: PluginExport>(plugin: *const 
         // called from here: an active plugin asks for `request_restart` and
         // the host re-reads the value cached in `activate`; an inactive one
         // needs nothing, the host reads `latency.get` when it activates.
-        // (Gersic Pressure patch.)
+        // (Magnitude patch, upstream: truce-audio/truce#238.)
         if data.latency_dirty.swap(false, Ordering::Relaxed)
             && !data.host.is_null()
             && data.active.load(Ordering::Relaxed)
@@ -2810,7 +2810,7 @@ unsafe extern "C" fn state_load<P: PluginExport>(
         state::apply_params(&*data.params_arc, &deserialized);
         // The restored values differ from what the host last saw; tell it
         // to re-read them (`clap.params` rescan is a main-thread call, as are
-        // `state.load` and preset loading). (Gersic Pressure patch.)
+        // `state.load` and preset loading). (Magnitude patch, upstream: truce-audio/truce#238.)
         if !data.host.is_null()
             && !data.host_params.is_null()
             && let Some(rescan) = (*data.host_params).rescan
@@ -2902,7 +2902,7 @@ unsafe extern "C" fn preset_load_from_location<P: PluginExport>(
         state::apply_params(&*data.params_arc, &deserialized);
         // The restored values differ from what the host last saw; tell it
         // to re-read them (`clap.params` rescan is a main-thread call, as are
-        // `state.load` and preset loading). (Gersic Pressure patch.)
+        // `state.load` and preset loading). (Magnitude patch, upstream: truce-audio/truce#238.)
         if !data.host.is_null()
             && !data.host_params.is_null()
             && let Some(rescan) = (*data.host_params).rescan

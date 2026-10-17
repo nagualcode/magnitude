@@ -13,8 +13,8 @@ use truce_core::editor::{PluginContext, PluginContextReadF32};
 use truce_egui::EguiEditor;
 use truce_params::Params;
 
-use crate::GersicPressureParams;
-use crate::GersicPressureParamsParamId as P;
+use crate::MagnitudeParams;
+use crate::MagnitudeParamsParamId as P;
 use crate::dsp::{SC_HPF_OFF_HZ, THRESHOLD_DB, static_curve_db};
 
 const WIDTH: u32 = 600;
@@ -59,7 +59,7 @@ struct Ui {
     history: VecDeque<(f32, f32)>,
 }
 
-pub(crate) fn create(params: Arc<GersicPressureParams>) -> Box<dyn Editor> {
+pub(crate) fn create(params: Arc<MagnitudeParams>) -> Box<dyn Editor> {
     let mut state = Ui {
         view: View::Transfer,
         out_peak: [0.0; 2],
@@ -72,7 +72,7 @@ pub(crate) fn create(params: Arc<GersicPressureParams>) -> Box<dyn Editor> {
     EguiEditor::new(
         params,
         (WIDTH, HEIGHT),
-        move |ui: &mut egui::Ui, cx: &PluginContext<GersicPressureParams>| {
+        move |ui: &mut egui::Ui, cx: &PluginContext<MagnitudeParams>| {
             state.draw(ui, cx);
         },
     )
@@ -89,7 +89,7 @@ fn db(lin: f32) -> f32 {
 }
 
 impl Ui {
-    fn draw(&mut self, ui: &mut egui::Ui, cx: &PluginContext<GersicPressureParams>) {
+    fn draw(&mut self, ui: &mut egui::Ui, cx: &PluginContext<MagnitudeParams>) {
         ui.ctx().request_repaint();
         let dt = ui.input(|i| i.stable_dt).clamp(0.001, 0.1);
         self.update_meters(cx, dt);
@@ -105,7 +105,7 @@ impl Ui {
         painter.text(
             pos2(header.left() + 24.0, header.center().y),
             Align2::LEFT_CENTER,
-            "Gersic Pressure",
+            "Magnitude",
             FontId::proportional(12.0),
             TEXT,
         );
@@ -183,7 +183,7 @@ impl Ui {
         toggle(ui, cx, hq, P::Hq, "HQ", "4x oversampled saturation");
     }
 
-    fn update_meters(&mut self, cx: &PluginContext<GersicPressureParams>, dt: f32) {
+    fn update_meters(&mut self, cx: &PluginContext<MagnitudeParams>, dt: f32) {
         // Peak meters: instant attack, ~20 dB/s fall.
         let fall = 20.0 * dt;
         for (ch, id) in [P::MeterLeft, P::MeterRight].into_iter().enumerate() {
@@ -245,7 +245,7 @@ impl Ui {
         &self,
         painter: &egui::Painter,
         rect: Rect,
-        cx: &PluginContext<GersicPressureParams>,
+        cx: &PluginContext<MagnitudeParams>,
     ) {
         let plot = rect.shrink(8.0);
         let to_x = |d: f32| plot.left() + (d - DB_MIN) / (DB_MAX - DB_MIN) * plot.width();
@@ -467,7 +467,7 @@ impl Ui {
     }
 }
 
-fn param_default_normalized(cx: &PluginContext<GersicPressureParams>, id: u32) -> Option<f64> {
+fn param_default_normalized(cx: &PluginContext<MagnitudeParams>, id: u32) -> Option<f64> {
     cx.params()
         .param_infos()
         .into_iter()
@@ -479,7 +479,7 @@ fn param_default_normalized(cx: &PluginContext<GersicPressureParams>, id: u32) -
 /// Drag vertically (Shift for fine), double-click to reset.
 fn dial(
     ui: &mut egui::Ui,
-    cx: &PluginContext<GersicPressureParams>,
+    cx: &PluginContext<MagnitudeParams>,
     rect: Rect,
     id: impl Into<u32>,
     label: &str,
@@ -564,7 +564,7 @@ fn dial(
 /// Ableton-style rectangular toggle button.
 fn toggle(
     ui: &mut egui::Ui,
-    cx: &PluginContext<GersicPressureParams>,
+    cx: &PluginContext<MagnitudeParams>,
     rect: Rect,
     id: impl Into<u32>,
     label: &str,

@@ -8,12 +8,12 @@ mod v1_dsp;
 use std::f64::consts::PI;
 use std::time::Instant;
 
-use gersic_pressure::dsp::{BlockSettings, Controls, GersicPressureDsp};
+use magnitude::dsp::{BlockSettings, Controls, MagnitudeDsp};
 
 const SR: f64 = 44_100.0;
 
-fn v2(hq: bool) -> GersicPressureDsp {
-    let mut d = GersicPressureDsp::new(SR);
+fn v2(hq: bool) -> MagnitudeDsp {
+    let mut d = MagnitudeDsp::new(SR);
     d.set_block(&BlockSettings {
         lookahead_ms: 0.0,
         hq,
@@ -116,7 +116,7 @@ fn main() {
     let c1 = t.elapsed().as_secs_f64();
 
     let bench = |hq: bool, sink: &mut f32| {
-        let mut d = GersicPressureDsp::new(SR);
+        let mut d = MagnitudeDsp::new(SR);
         d.set_block(&BlockSettings {
             hq,
             ..BlockSettings::default()

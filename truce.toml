@@ -5,15 +5,18 @@ url = "https://github.com/nagualcode/gersicpressurebornagain"
 au_manufacturer = "Jrdm"
 
 [[plugin]]
-name = "Gersic Pressure"
+name = "Magnitude"
+# Identity keys (bundle_id, fourcc, au3_subtype) predate the rename to
+# Magnitude and must stay as-is: CLAP/VST3 ids, the state hash and the AU
+# component are derived from them, so changing them would orphan saved sessions.
 bundle_id = "gersic-pressure"
-crate = "gersic-pressure"
+crate = "magnitude"
 category = "effect"
 fourcc = "PR3S"
 au3_subtype = "PR3S"
 au_tag = "Effects"
 aax_category = "Dynamics"
 vst3_subcategory = "Dynamics"
-description = "PRESSURE upward compressor (2006) - recreated and modernised"
+description = "Upward mastering compressor descended from PRESSURE (2006)"
 windows_icon = "assets/truce-minimal.ico"
 macos_icon = "assets/truce-minimal.icns"

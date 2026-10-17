@@ -1,6 +1,6 @@
-//! # Gersic Pressure - Upward Mastering Compressor
+//! # Magnitude - Upward Mastering Compressor
 //!
-//! Recreation of Tom & Jeremy Gersic's 2006 PRESSURE VST plugin, reverse engineered
+//! Magnitude began as a recreation of Tom & Jeremy Gersic's 2006 PRESSURE VST plugin, reverse engineered
 //! from the original binary (`Gersic_Pressure.dll` / `schematic.osm`) and rebuilt on
 //! the [Truce](https://github.com/truce-audio/truce) plugin framework.
 //!
@@ -19,8 +19,8 @@ pub mod oversampling;
 use std::sync::Arc;
 use truce::prelude::*;
 
-use GersicPressureParamsParamId as P;
-pub use dsp::GersicPressureDsp;
+use MagnitudeParamsParamId as P;
+pub use dsp::MagnitudeDsp;
 use dsp::{BlockSettings, Controls};
 
 /// Sub-block length for per-sample parameter smoothing.
@@ -29,7 +29,7 @@ const CHUNK: usize = 64;
 // --- Parameters ---
 
 #[derive(Params)]
-pub struct GersicPressureParams {
+pub struct MagnitudeParams {
     /// Audio-path delay relative to the detector, in milliseconds.
     /// Changes glide click-free; the host is told the new latency.
     #[param(
@@ -122,7 +122,7 @@ pub struct GersicPressureParams {
     pub meter_env: MeterSlot,
 }
 
-impl GersicPressureParams {
+impl MagnitudeParams {
     /// Ranges are authored as 0..100, so print the plain value (the stock `%`
     /// formatter expects 0..1 and would show "2500%").
     fn format_percent(&self, value: f64) -> String {
@@ -141,32 +141,32 @@ impl GersicPressureParams {
 
 // --- Plugin Implementation ---
 
-pub struct GersicPressure;
+pub struct Magnitude;
 
-impl PluginLogic for GersicPressure {
-    type Params = GersicPressureParams;
-    type DspState = GersicPressureDsp;
+impl PluginLogic for Magnitude {
+    type Params = MagnitudeParams;
+    type DspState = MagnitudeDsp;
 
-    fn init(params: &GersicPressureParams, _cx: &InitContext) -> GersicPressureDsp {
-        let mut dsp = GersicPressureDsp::new(44_100.0);
+    fn init(params: &MagnitudeParams, _cx: &InitContext) -> MagnitudeDsp {
+        let mut dsp = MagnitudeDsp::new(44_100.0);
         dsp.set_block(&params.block_settings());
         dsp.settle();
         dsp
     }
 
-    fn reset(state: &mut GersicPressureDsp, params: &GersicPressureParams, config: &AudioConfig) {
+    fn reset(state: &mut MagnitudeDsp, params: &MagnitudeParams, config: &AudioConfig) {
         state.reset(config.sample_rate);
         state.set_block(&params.block_settings());
         state.settle();
     }
 
-    fn latency(state: &GersicPressureDsp) -> u32 {
+    fn latency(state: &MagnitudeDsp) -> u32 {
         state.latency()
     }
 
     fn process(
-        state: &mut GersicPressureDsp,
-        params: &GersicPressureParams,
+        state: &mut MagnitudeDsp,
+        params: &MagnitudeParams,
         buffer: &mut AudioBuffer,
         _events: &EventList,
         context: &mut ProcessContext,
@@ -234,14 +234,14 @@ impl PluginLogic for GersicPressure {
         ProcessStatus::Normal
     }
 
-    fn editor(params: Arc<GersicPressureParams>) -> Box<dyn Editor> {
+    fn editor(params: Arc<MagnitudeParams>) -> Box<dyn Editor> {
         editor::create(params)
     }
 }
 
 truce::plugin! {
-    logic: GersicPressure,
-    params: GersicPressureParams,
+    logic: Magnitude,
+    params: MagnitudeParams,
 }
 
 truce::enable_rt_paranoid!();
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn defaults_reproduce_the_original() {
-        let params = GersicPressureParams::new();
+        let params = MagnitudeParams::new();
         assert_eq!(params.lookahead.value(), 50.0);
         assert_eq!(params.amount.value(), 25.0);
         assert_eq!(params.gain.value(), 0.0);
@@ -303,6 +303,6 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn gui_screenshot_macos() {
-        truce_test::screenshot!(Plugin, "screenshots/gersic_pressure_default_macos.png").run();
+        truce_test::screenshot!(Plugin, "screenshots/magnitude_default_macos.png").run();
     }
 }

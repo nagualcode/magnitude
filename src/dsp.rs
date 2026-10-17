@@ -1,4 +1,4 @@
-//! DSP core for Gersic Pressure.
+//! DSP core for Magnitude.
 //!
 //! Signal flow (per channel, recovered from the original 2006 SynthMaker schematic):
 //!
@@ -163,8 +163,8 @@ pub struct Frame {
     pub env: [f32; 2],
 }
 
-/// Complete DSP state; every buffer is allocated in [`GersicPressureDsp::reset`].
-pub struct GersicPressureDsp {
+/// Complete DSP state; every buffer is allocated in [`MagnitudeDsp::reset`].
+pub struct MagnitudeDsp {
     sample_rate: f64,
     delay: [Vec<f32>; 2],
     delay_mask: usize,
@@ -185,13 +185,13 @@ pub struct GersicPressureDsp {
     oversampler: [Oversampler4x; 2],
 }
 
-impl Default for GersicPressureDsp {
+impl Default for MagnitudeDsp {
     fn default() -> Self {
         Self::new(44_100.0)
     }
 }
 
-impl GersicPressureDsp {
+impl MagnitudeDsp {
     /// Create a DSP instance with buffers sized for `sample_rate`.
     #[must_use]
     pub fn new(sample_rate: f64) -> Self {
@@ -401,8 +401,8 @@ mod tests {
         color: 1.0,
     };
 
-    fn dsp_with(sr: f64, s: BlockSettings) -> GersicPressureDsp {
-        let mut dsp = GersicPressureDsp::new(sr);
+    fn dsp_with(sr: f64, s: BlockSettings) -> MagnitudeDsp {
+        let mut dsp = MagnitudeDsp::new(sr);
         dsp.set_block(&s);
         dsp.settle();
         dsp

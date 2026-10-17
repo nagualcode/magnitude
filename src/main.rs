@@ -1,4 +1,4 @@
-use gersic_pressure::Plugin;
+use magnitude::Plugin;
 
 fn main() {
     truce_standalone::run::<Plugin>();

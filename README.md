@@ -1,4 +1,4 @@
-# Gersic Pressure: Born Again
+# Magnitude
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Framework: Truce](https://img.shields.io/badge/Framework-Truce%20v6.3-purple.svg)](https://github.com/truce-audio/truce)
@@ -9,9 +9,11 @@
 > *"Pressure Mastering Compressor uses a technique called upward compression; it increases the level of quiet portions in a mix without reducing the level of attack transients like a traditional compressor."*
 > — **Jeremy Gersic, 2006**
 
-A recreation of the 2006 freeware VST **PRESSURE Upward Compressor** by Tom & Jeremy Gersic. The DSP was reverse engineered from the original SynthMaker schematic and rebuilt in Rust on the [Truce](https://github.com/truce-audio/truce) plugin framework. Version 2 makes the recreation more faithful (see [What changed in v2](#what-changed-in-v2)) and adds optional modern features that default to the original sound.
+**Magnitude** is an upward mastering compressor for macOS (CLAP, VST3, AU). It is descended from the 2006 freeware VST **PRESSURE Upward Compressor** by Tom & Jeremy Gersic: the DSP was reverse engineered from the original SynthMaker schematic and rebuilt in Rust on the [Truce](https://github.com/truce-audio/truce) plugin framework. It reproduces the original sound by default, with fidelity fixes (see [What changed in v2](#what-changed-in-v2)) and optional modern features.
 
-![Gersic Pressure v2 editor](screenshots/gersic_pressure_default_macos.png)
+Until v2.0.1 the project was called **Gersic Pressure: Born Again**. See [Upgrading from Gersic Pressure](#upgrading-from-gersic-pressure).
+
+![Magnitude editor](screenshots/magnitude_default_macos.png)
 
 Published under the vendor **Jardim Sonoro** in your DAW.
 
@@ -21,16 +23,31 @@ Published under the vendor **Jardim Sonoro** in your DAW.
 
 Get the latest build from [Releases](https://github.com/nagualcode/gersicpressurebornagain/releases):
 
-- `gersic-pressure-<ver>-macos-arm64.pkg`: installer (CLAP, VST3, AU v2 + factory presets, user scope, no admin prompt).
-- `gersic-pressure-<ver>-macos-arm64-bundles.zip`: the raw `.clap`, `.vst3` and `.component` bundles.
+- `magnitude-<ver>-macos-arm64.pkg`: installer (CLAP, VST3, AU v2 + factory presets, user scope, no admin prompt).
+- `magnitude-<ver>-macos-arm64-bundles.zip`: the raw `.clap`, `.vst3` and `.component` bundles.
 
 The binaries are **arm64 only** (Apple Silicon). Intel Macs need to build from source.
 
 The builds are ad-hoc signed and **not notarized**. If macOS blocks the installer, right-click → *Open*. If you use the zip, clear the quarantine flag before copying the bundles:
 
 ```bash
-xattr -dr com.apple.quarantine "Gersic Pressure.clap" "Gersic Pressure.vst3" "Gersic Pressure.component"
+xattr -dr com.apple.quarantine "Magnitude.clap" "Magnitude.vst3" "Magnitude.component"
 ```
+
+### Upgrading from Gersic Pressure
+
+Magnitude keeps the same plugin identity as Gersic Pressure (CLAP/VST3 ids, the AU code `aufx PR3S Jrdm` and all parameter ids). Projects and presets saved with Gersic Pressure v1/v2 open in Magnitude unchanged, and the DAW simply shows the new name.
+
+Because the identity is shared, **remove the old bundles** so your DAW doesn't find two plugins with the same id, then rescan:
+
+```bash
+rm -rf ~/Library/Audio/Plug-Ins/CLAP/"Gersic Pressure.clap" \
+       ~/Library/Audio/Plug-Ins/VST3/"Gersic Pressure.vst3" \
+       ~/Library/Audio/Plug-Ins/Components/"Gersic Pressure.component" \
+       ~/Library/Audio/Presets/"Jardim Sonoro"/"Gersic Pressure"
+```
+
+(If you installed system-wide, the same names live under `/Library/Audio/Plug-Ins/`.)
 
 ---
 
@@ -108,7 +125,7 @@ cargo run --release --example analyze
 
 Every release is checked with `cargo truce validate`: **auval** (AU v2 and v3), **pluginval** (VST3) and **clap-validator 0.4.1** (CLAP: 37 passed, 7 skipped for extensions the plugin doesn't implement).
 
-clap-validator found two spec violations in Truce 6.3.0's CLAP wrapper: `clap_host_latency::changed` was called while the plugin was active, and state/preset loads didn't request a parameter rescan. They are fixed in a vendored copy (`vendor/truce-clap`, see `PATCHED.md`) that the build uses through `[patch.crates-io]`, until the fixes land upstream.
+clap-validator found two spec violations in Truce 6.3.0's CLAP wrapper: `clap_host_latency::changed` was called while the plugin was active, and state/preset loads didn't request a parameter rescan. They are fixed in a vendored copy (`vendor/truce-clap`, see `PATCHED.md`) that the build uses through `[patch.crates-io]`. The fixes are proposed upstream in [truce-audio/truce#238](https://github.com/truce-audio/truce/pull/238); the vendored copy goes away once they ship.
 
 ---
 
@@ -140,8 +157,8 @@ Parameter IDs are hashes of the field names, and the three original fields kept 
 Requirements: [Rust](https://rustup.rs/) 1.92+ and the Truce CLI (`cargo install cargo-truce`).
 
 ```bash
-git clone https://github.com/nagualcode/gersicpressurebornagain.git
-cd gersicpressurebornagain
+git clone https://github.com/nagualcode/gersicpressurebornagain.git magnitude
+cd magnitude
 
 cargo truce install --clap --vst3 --au2 --user    # build + install into your user plugin folders
 cargo truce run                                   # standalone, no DAW needed
@@ -169,7 +186,7 @@ cargo truce package --formats clap,vst3,au2 --user --host-only   # .pkg installe
 
 ## Credits & license
 
-- **Original algorithm & concept:** Tom & Jeremy Gersic (2006).
-- **Reverse engineering & Rust recreation:** [nagualcode](https://github.com/nagualcode) (2026).
+- **Original algorithm & concept (PRESSURE, 2006):** Tom & Jeremy Gersic. Magnitude is an independent project and is not affiliated with or endorsed by them.
+- **Magnitude (reverse engineering, DSP, Rust implementation):** [nagualcode](https://github.com/nagualcode) (2026).
 - **Vendor:** Jardim Sonoro.
-- The recreation's source code is released under the [MIT License](LICENSE). The files in `legacy/` are the original authors' work and are included for research and reference only.
+- Magnitude's source code is released under the [MIT License](LICENSE). The files in `legacy/` are the original authors' work and are included for research and reference only.

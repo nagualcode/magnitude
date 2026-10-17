@@ -660,31 +660,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gersic-pressure"
-version = "2.0.1"
-dependencies = [
- "clap-sys",
- "egui",
- "hound",
- "truce",
- "truce-aax",
- "truce-au",
- "truce-build",
- "truce-clap",
- "truce-core",
- "truce-driver",
- "truce-egui",
- "truce-loader",
- "truce-lv2",
- "truce-params",
- "truce-standalone",
- "truce-test",
- "truce-utils",
- "truce-vst2",
- "truce-vst3",
-]
-
-[[package]]
 name = "gethostname"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1013,6 +988,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a1b95cd5421ec55b445b5ae102f5ea0e768de1f82bd3001e11f426c269c3aea"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "magnitude"
+version = "2.1.0"
+dependencies = [
+ "clap-sys",
+ "egui",
+ "hound",
+ "truce",
+ "truce-aax",
+ "truce-au",
+ "truce-build",
+ "truce-clap",
+ "truce-core",
+ "truce-driver",
+ "truce-egui",
+ "truce-loader",
+ "truce-lv2",
+ "truce-params",
+ "truce-standalone",
+ "truce-test",
+ "truce-utils",
+ "truce-vst2",
+ "truce-vst3",
 ]
 
 [[package]]

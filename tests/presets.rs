@@ -1,9 +1,9 @@
-//! Factory preset validation tests for Gersic Pressure.
+//! Factory preset validation tests for Magnitude.
 
 use std::collections::HashSet;
 use std::path::Path;
 
-use gersic_pressure::GersicPressureParams;
+use magnitude::MagnitudeParams;
 use truce_build::presets::{ParamNameMap, read_param_annotations, read_presets_dir};
 use truce_params::Params;
 use truce_utils::state::deserialize_state;
@@ -14,7 +14,7 @@ fn library() -> Vec<truce_build::presets::AuthoredPreset> {
     let annotations = read_param_annotations(
         &truce_build::target_dir(workspace_root)
             .join("lv2-meta")
-            .join("gersic-pressure"),
+            .join("magnitude"),
     );
     let names = ParamNameMap::from_annotations(&annotations);
     assert!(
@@ -44,7 +44,7 @@ fn library_has_one_default_and_unique_names() {
 
 #[test]
 fn presets_reference_real_params_within_range() {
-    let params = GersicPressureParams::default();
+    let params = MagnitudeParams::default();
     let ids: HashSet<u32> = params.param_infos().iter().map(|i| i.id).collect();
 
     for preset in library() {

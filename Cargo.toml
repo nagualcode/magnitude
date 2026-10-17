@@ -1,9 +1,9 @@
 [package]
-name = "gersic-pressure"
-version = "2.0.1"
+name = "magnitude"
+version = "2.1.0"
 edition = "2024"
 authors = ["Jeremy Gersic", "Tom Gersic", "nagualcode"]
-description = "Recreation and modernisation of Tom & Jeremy Gersic's 2006 PRESSURE upward compressor, built with Truce"
+description = "Magnitude: upward mastering compressor descended from Tom & Jeremy Gersic's 2006 PRESSURE, built with Truce"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/nagualcode/gersicpressurebornagain"
@@ -14,7 +14,7 @@ categories = ["multimedia::audio"]
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [[bin]]
-name = "gersic-pressure-standalone"
+name = "magnitude-standalone"
 path = "src/main.rs"
 required-features = ["standalone"]
 
