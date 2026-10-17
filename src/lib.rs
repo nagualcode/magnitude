@@ -1,62 +1,59 @@
 //! # Gersic Pressure - Upward Mastering Compressor
 //!
-//! Faithful recreation of Tom & Jeremy Gersic's iconic 2006 VST plugin,
-//! reverse engineered from the original binary (`Gersic_Pressure.dll` / `schematic.osm`)
-//! and brought into the modern era with the [Truce](https://github.com/truce-audio/truce)
-//! audio plugin framework and Rupert Neve-caliber sound engineering.
+//! Recreation of Tom & Jeremy Gersic's 2006 PRESSURE VST plugin, reverse engineered
+//! from the original binary (`Gersic_Pressure.dll` / `schematic.osm`) and rebuilt on
+//! the [Truce](https://github.com/truce-audio/truce) plugin framework.
 //!
-//! ## What is Upward Compression?
-//! Unlike traditional downward compressors that squash peaks exceeding a threshold,
-//! an upward compressor raises the energy of quiet program material below the threshold
-//! while leaving loud transients dynamic and punchy.
+//! Upward compression is realised the way the original does it: a parallel blend of
+//! the (lookahead-delayed) dry signal with a copy that is compressed above -50 dBFS.
+//! Loud passages are pulled down in the wet path while quiet ones pass at unity, so
+//! after the blend the quiet material sits relatively higher.
 //!
-//! In Gersic Pressure, this is achieved by:
-//! 1. Undelayed sidechain peak detection with asymmetric attack (0.2 ms) and release (250 ms) ballistics.
-//! 2. Ring-buffered audio path delay (up to 100 ms lookahead), enabling zero-overshoot transient tracking.
-//! 3. Logarithmic transfer function with fixed ratio (0.5994) above a -50 dB threshold.
-//! 4. Parallel crossfade mix between dry audio and gain-reduced path.
-//! 5. Output makeup gain (-50 dB to +50 dB).
-//! 6. Rupert Neve-grade rational soft-saturator ($x / (1 + |x|)$) to transparently tame peaks.
+//! The three original controls (LookAhead, Amount, Out Gain) behave as in 2006. The
+//! v2 additions (Color, Link, SC HPF, HQ) default to the original sound.
 
 pub mod dsp;
+mod editor;
+pub mod oversampling;
 
 use std::sync::Arc;
 use truce::prelude::*;
-use truce_gui::IntoLayoutEditor;
-use truce_gui_types::layout::{GridLayout, knob, meter, widgets};
 
-pub use dsp::GersicPressureDsp;
 use GersicPressureParamsParamId as P;
+pub use dsp::GersicPressureDsp;
+use dsp::{BlockSettings, Controls};
+
+/// Sub-block length for per-sample parameter smoothing.
+const CHUNK: usize = 64;
 
 // --- Parameters ---
 
 #[derive(Params)]
 pub struct GersicPressureParams {
-    /// LookAhead delay time in milliseconds (0.0 to 100.0 ms).
-    /// Delays audio path relative to the sidechain detector.
+    /// Audio-path delay relative to the detector, in milliseconds.
+    /// Changes glide click-free; the host is told the new latency.
     #[param(
         name = "LookAhead",
         short_name = "Ahead",
         range = "linear(0.0, 100.0)",
         default = 50.0,
-        unit = "ms",
-        smooth = "exp(10)"
+        unit = "ms"
     )]
     pub lookahead: FloatParam,
 
-    /// Compression Amount / Parallel Wet Mix percentage (0.0% to 100.0%).
-    /// Default 25.0% (corresponds to 12.5 in original 0..50 scale).
+    /// Parallel blend of the compressed path (original 0..50 scale shown as 0..100 %).
     #[param(
         name = "Amount",
         short_name = "Amount",
         range = "linear(0.0, 100.0)",
         default = 25.0,
         unit = "%",
+        format = "format_percent",
         smooth = "exp(10)"
     )]
     pub amount: FloatParam,
 
-    /// Output makeup gain in dB (-50.0 dB to +50.0 dB).
+    /// Output gain in dB, applied before the soft saturator.
     #[param(
         name = "Out Gain",
         short_name = "Gain",
@@ -67,17 +64,79 @@ pub struct GersicPressureParams {
     )]
     pub gain: FloatParam,
 
-    /// Left output peak meter.
+    /// Soft saturator drive: 100 % is the original `x / (1 + |x|)`, 0 % is clean.
+    #[param(
+        name = "Color",
+        short_name = "Color",
+        range = "linear(0.0, 100.0)",
+        default = 100.0,
+        unit = "%",
+        format = "format_percent",
+        smooth = "exp(10)"
+    )]
+    pub color: FloatParam,
+
+    /// Stereo detector link: 0 % detects each channel on its own (as the original).
+    #[param(
+        name = "Link",
+        short_name = "Link",
+        range = "linear(0.0, 100.0)",
+        default = 0.0,
+        unit = "%",
+        format = "format_percent"
+    )]
+    pub link: FloatParam,
+
+    /// Detector high-pass; the lowest setting switches it off.
+    #[param(
+        name = "SC HPF",
+        short_name = "HPF",
+        range = "log(20.0, 500.0)",
+        default = 20.0,
+        unit = "Hz"
+    )]
+    pub sc_hpf: FloatParam,
+
+    /// Run the saturator 4x oversampled (adds 71 samples of compensated latency).
+    #[param(name = "HQ", default = true)]
+    pub hq: BoolParam,
+
+    /// Left output peak (linear).
     #[meter]
     pub meter_left: MeterSlot,
 
-    /// Right output peak meter.
+    /// Right output peak (linear).
     #[meter]
     pub meter_right: MeterSlot,
 
-    /// Gain reduction meter in dB.
+    /// Lowest wet-path gain of the block, left (linear, <= 1).
     #[meter]
     pub meter_gr: MeterSlot,
+
+    /// Lowest wet-path gain of the block, right (linear, <= 1).
+    #[meter]
+    pub meter_gr_right: MeterSlot,
+
+    /// Highest detector envelope of the block (linear).
+    #[meter]
+    pub meter_env: MeterSlot,
+}
+
+impl GersicPressureParams {
+    /// Ranges are authored as 0..100, so print the plain value (the stock `%`
+    /// formatter expects 0..1 and would show "2500%").
+    fn format_percent(&self, value: f64) -> String {
+        format!("{value:.1} %")
+    }
+
+    fn block_settings(&self) -> BlockSettings {
+        BlockSettings {
+            lookahead_ms: self.lookahead.value(),
+            link: self.link.value() * 0.01,
+            sc_hpf_hz: self.sc_hpf.value(),
+            hq: self.hq.value(),
+        }
+    }
 }
 
 // --- Plugin Implementation ---
@@ -88,8 +147,21 @@ impl PluginLogic for GersicPressure {
     type Params = GersicPressureParams;
     type DspState = GersicPressureDsp;
 
-    fn reset(state: &mut GersicPressureDsp, _params: &GersicPressureParams, config: &AudioConfig) {
+    fn init(params: &GersicPressureParams, _cx: &InitContext) -> GersicPressureDsp {
+        let mut dsp = GersicPressureDsp::new(44_100.0);
+        dsp.set_block(&params.block_settings());
+        dsp.settle();
+        dsp
+    }
+
+    fn reset(state: &mut GersicPressureDsp, params: &GersicPressureParams, config: &AudioConfig) {
         state.reset(config.sample_rate);
+        state.set_block(&params.block_settings());
+        state.settle();
+    }
+
+    fn latency(state: &GersicPressureDsp) -> u32 {
+        state.latency()
     }
 
     fn process(
@@ -104,59 +176,66 @@ impl PluginLogic for GersicPressure {
             return ProcessStatus::Normal;
         }
 
-        // Read smoothed parameters
-        let lookahead_ms = params.lookahead.read();
-        let amount_norm = params.amount.read() * 0.01; // convert 0..100% to 0..1
-        let gain_db = params.gain.read();
+        state.set_block(&params.block_settings());
 
-        let mut peak_gr_db = 0.0f32;
+        let mut amount = [0.0f32; CHUNK];
+        let mut gain_db = [0.0f32; CHUNK];
+        let mut color = [0.0f32; CHUNK];
+        let mut min_gain = [1.0f32; 2];
+        let mut max_env = 0.0f32;
+        let mut cached_db = f32::NAN;
+        let mut cached_lin = 1.0f32;
 
-        // Idiomatic zero-allocation frame processing:
-        buffer.for_each_stereo_frame(|inp, out| {
-            let (y_l, y_r, gr) = state.process_sample(inp[0], inp[1], lookahead_ms, amount_norm, gain_db);
-            out[0] = y_l;
-            out[1] = y_r;
-            if gr > peak_gr_db {
-                peak_gr_db = gr;
-            }
-        });
+        let mut start = 0;
+        while start < num_samples {
+            let len = CHUNK.min(num_samples - start);
+            params.amount.read_into(&mut amount[..len]);
+            params.gain.read_into(&mut gain_db[..len]);
+            params.color.read_into(&mut color[..len]);
 
-        // Update real-time meters
-        if buffer.num_output_channels() >= 1 {
+            let mut i = 0;
+            buffer.slice(start, len).for_each_stereo_frame(|inp, out| {
+                // dB -> linear only when the smoothed value actually moves.
+                if gain_db[i] != cached_db {
+                    cached_db = gain_db[i];
+                    cached_lin = db_to_linear(cached_db);
+                }
+                let controls = Controls {
+                    amount: amount[i] * 0.01,
+                    out_gain: cached_lin,
+                    color: color[i] * 0.01,
+                };
+                let f = state.process_frame(inp[0], inp[1], &controls);
+                out[0] = f.left;
+                out[1] = f.right;
+                min_gain[0] = min_gain[0].min(f.gain[0]);
+                min_gain[1] = min_gain[1].min(f.gain[1]);
+                max_env = max_env.max(f.env[0].max(f.env[1]));
+                i += 1;
+            });
+            start += len;
+        }
+
+        let outs = buffer.num_output_channels();
+        if outs >= 1 {
             context.set_meter(P::MeterLeft, buffer.output_peak(0));
         }
-        if buffer.num_output_channels() >= 2 {
-            context.set_meter(P::MeterRight, buffer.output_peak(1));
-        }
-        // Normalize gain reduction to [0, 1] range for GUI display (0 to 24 dB reduction range)
-        let gr_meter_val = (peak_gr_db / 24.0).clamp(0.0, 1.0);
-        context.set_meter(P::MeterGr, gr_meter_val);
+        context.set_meter(
+            P::MeterRight,
+            buffer.output_peak(if outs >= 2 { 1 } else { 0 }),
+        );
+        context.set_meter(P::MeterGr, min_gain[0]);
+        context.set_meter(
+            P::MeterGrRight,
+            if outs >= 2 { min_gain[1] } else { min_gain[0] },
+        );
+        context.set_meter(P::MeterEnv, max_env);
 
         ProcessStatus::Normal
     }
 
     fn editor(params: Arc<GersicPressureParams>) -> Box<dyn Editor> {
-        // Rupert Neve-grade layout:
-        // Top row: LookAhead, Amount, Out Gain knobs
-        // Right section: Level Meters + Gain Reduction (GR) Meter
-        GridLayout::build(vec![widgets(vec![
-            knob(P::Lookahead, "LookAhead").at(0, 0),
-            knob(P::Amount, "Amount").at(1, 0),
-            knob(P::Gain, "Out Gain").at(2, 0),
-            meter(&[P::MeterLeft, P::MeterRight], "Output")
-                .at(3, 0)
-                .rows(2),
-            meter(&[P::MeterGr], "GR")
-                .at(4, 0)
-                .rows(2),
-        ])])
-        .with_title("PRESSURE")
-        .with_subtitle("Upward Mastering Compressor")
-        .with_cols(5)
-        .resizable(true)
-        .min_size((5, 2))
-        .max_size((8, 4))
-        .into_editor(&params)
+        editor::create(params)
     }
 }
 
@@ -177,11 +256,24 @@ mod tests {
     }
 
     #[test]
-    fn test_initialization_and_params() {
+    fn defaults_reproduce_the_original() {
         let params = GersicPressureParams::new();
-        assert_eq!(params.lookahead.read(), 50.0);
-        assert_eq!(params.amount.read(), 25.0);
-        assert_eq!(params.gain.read(), 0.0);
+        assert_eq!(params.lookahead.value(), 50.0);
+        assert_eq!(params.amount.value(), 25.0);
+        assert_eq!(params.gain.value(), 0.0);
+        assert_eq!(params.color.value(), 100.0);
+        assert_eq!(params.link.value(), 0.0);
+        assert!(params.sc_hpf.value() <= dsp::SC_HPF_OFF_HZ);
+    }
+
+    #[test]
+    fn has_editor() {
+        truce_test::assert_has_editor::<Plugin>();
+    }
+
+    #[test]
+    fn state_round_trips() {
+        truce_test::assert_state_round_trip::<Plugin>();
     }
 
     #[test]
@@ -190,7 +282,7 @@ mod tests {
         use truce_test::{InputSource, assert_realtime_clean, driver};
         assert_realtime_clean(|| {
             driver!(Plugin)
-                .duration(Duration::from_millis(40))
+                .duration(Duration::from_millis(60))
                 .input(InputSource::Constant(0.25))
                 .script(|s| {
                     s.set_param(P::Amount, 50.0);
@@ -199,8 +291,18 @@ mod tests {
                     s.wait_ms(10);
                     s.set_param(P::Lookahead, 20.0);
                     s.wait_ms(10);
+                    s.set_param(P::ScHpf, 150.0);
+                    s.wait_ms(10);
+                    s.set_param(P::Hq, 0.0);
+                    s.wait_ms(10);
                 })
                 .run()
         });
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn gui_screenshot_macos() {
+        truce_test::screenshot!(Plugin, "screenshots/gersic_pressure_default_macos.png").run();
     }
 }

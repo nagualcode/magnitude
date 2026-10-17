@@ -9,3 +9,7 @@ truce-repo/
 Thumbs.db
 *.swp
 *~
+
+# Build outputs (shipped via GitHub Releases)
+bundles/
+dist/

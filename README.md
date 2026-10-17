@@ -1,4 +1,4 @@
-# 🎛️ Gersic Pressure: Born Again
+# Gersic Pressure: Born Again
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Framework: Truce](https://img.shields.io/badge/Framework-Truce%20v6.3-purple.svg)](https://github.com/truce-audio/truce)
@@ -6,171 +6,161 @@
 [![Formats: CLAP | VST3 | AU](https://img.shields.io/badge/Formats-CLAP%20%7C%20VST3%20%7C%20AU-brightgreen.svg)]()
 [![GitHub Release](https://img.shields.io/github/v/release/nagualcode/gersicpressurebornagain?color=blue)](https://github.com/nagualcode/gersicpressurebornagain/releases)
 
-> *"Pressure Mastering Compressor uses a technique called upward compression; it increases the level of quiet portions in a mix without reducing the level of attack transients like a traditional compressor."*  
+> *"Pressure Mastering Compressor uses a technique called upward compression; it increases the level of quiet portions in a mix without reducing the level of attack transients like a traditional compressor."*
 > — **Jeremy Gersic, 2006**
 
-**Gersic Pressure: Born Again** is a bit-exact, modern recreation of the legendary 2006 VST dynamics processor **PRESSURE Upward Compressor** originally designed by Tom & Jeremy Gersic.
+A recreation of the 2006 freeware VST **PRESSURE Upward Compressor** by Tom & Jeremy Gersic. The DSP was reverse engineered from the original SynthMaker schematic and rebuilt in Rust on the [Truce](https://github.com/truce-audio/truce) plugin framework. Version 2 makes the recreation more faithful (see [What changed in v2](#what-changed-in-v2)) and adds optional modern features that default to the original sound.
 
-Engineered with **Rupert Neve-caliber sound engineering precision** and built on the modern [Truce](https://github.com/truce-audio/truce) audio plugin framework in Rust, this version brings the iconic algorithm to 64-bit modern DAWs (macOS, Windows, Linux) in **CLAP, VST3, AU v2/v3, and Standalone** formats with **zero-allocation real-time safety**.
+![Gersic Pressure v2 editor](screenshots/gersic_pressure_default_macos.png)
 
-In your DAW (Logic Pro, Ableton Live, Reaper, Bitwig, Studio One, Cubase, FL Studio), the plugin is published under the vendor folder **Jardim Sonoro**.
-
----
-
-## ⚡ Quick Download (macOS Pre-compiled Binaries)
-
-Ready-to-use binaries are available under [Releases](https://github.com/nagualcode/gersicpressurebornagain/releases):
-- **Universal macOS Installer (`.pkg`)** and **Bundle Archive (`.zip`)** supporting both Apple Silicon (ARM64) and Intel (x86_64).
-- Includes **CLAP**, **VST3**, and **Audio Unit (AU v2/v3)** formats + factory presets.
+Published under the vendor **Jardim Sonoro** in your DAW.
 
 ---
 
-## 🎵 Why Upward Compression? (The Rupert Neve Perspective)
+## Download (macOS, Apple Silicon)
 
-In traditional **downward compression**, signals exceeding a threshold are attenuated. While effective for controlling peak excursions, aggressive downward compression frequently robs a mix of its initial transient punch (*crest factor*), dulling snare hits, acoustic guitar picks, and vocal plosives.
+Get the latest build from [Releases](https://github.com/nagualcode/gersicpressurebornagain/releases):
 
-**Upward compression** flips this paradigm:
-1. High-level signals exceeding $-50\text{ dBFS}$ are attenuated along the parallel (*wet*) path.
-2. Low-level dynamic content (below $-50\text{ dBFS}$) passes through with zero attenuation ($0\text{ dB}$ gain reduction).
-3. Summing the delayed original signal (*dry*) with the compressed signal (*wet*) lifts the noise floor, subtle room reverberations, cymbal decays, and vocal breath nuances while attack transients remain completely uncompromised through the direct path.
+- `gersic-pressure-<ver>-macos-arm64.pkg`: installer (CLAP, VST3, AU v2 + factory presets, user scope, no admin prompt).
+- `gersic-pressure-<ver>-macos-arm64-bundles.zip`: the raw `.clap`, `.vst3` and `.component` bundles.
 
----
+The binaries are **arm64 only** (Apple Silicon). Intel Macs need to build from source.
 
-## 🔬 Reverse Engineering & DSP Architecture
+The builds are ad-hoc signed and **not notarized**. If macOS blocks the installer, right-click → *Open*. If you use the zip, clear the quarantine flag before copying the bundles:
 
-The original 2006 binary (`Gersic_Pressure.dll`) was unpacked from UPX and its proprietary OutSim SynthMaker 0.9.5 container decrypted (4-byte circular ROR rotation `[2, 4, 5, 3]`), extracting the original circuit blueprint (`schematic.osm`).
-
-### Exact Signal Flow and DSP Equations:
-
-```
-Audio In [L, R] ──┬─────────────────────────────► [Lookahead Delay Buffer] ───► Dry [L, R] ──┬──► (1 - Amount) ──┐
-                  │                                                                          │                    │
-                  ▼                                                                          ▼                    ▼
-          [Sidechain Detector]                                                           [Gain Mult]            [+]
-          normIn = max(|L|, |R|) + 1e-8                                                  G_lin = 10^(GR/20)       │
-                  │                                                                          ▲                    │
-                  ▼                                                                          │                    │
-          [Envelope Follower]                                                           Wet [L, R] ──► (Amount) ──┘
-          c_atk = exp(-1 / (0.0002 * fs))                                                            │
-          c_rel = exp(-1 / (0.25 * fs))                                                              ▼
-                  │                                                                             [Parallel Mix]
-                  ▼                                                                                  │
-          [Log Transfer Curve]                                                                       ▼
-          dB_in = 20 * log10(max(env, 1e-10))                                                   [Makeup Gain]
-          over  = max(dB_in - (-50.0 dB), 0)                                                    gain * 10^(dB/20)
-          GR_dB = -over * (1 - 0.5994)                                                               │
-                                                                                                     ▼
-                                                                                              [Rational Clipper]
-                                                                                              y = x / (1 + |x|)
-                                                                                                     │
-                                                                                                     ▼
-                                                                                               Audio Out [L, R]
-```
-
-1. **Lookahead Audio Delay Buffer:**
-   - Circular ring buffer with zero audio-thread memory allocation.
-   - Delay range: `0.0 ms` to `100.0 ms` (default: `50.0 ms`).
-   - The peak detector monitors the un-delayed incoming audio, enabling true overshoot-free transient tracking without phase distortion or envelope discontinuity.
-
-2. **Sidechain Peak Detector:**
-   - Magnitude detection: $\text{normIn} = \max(|L|, |R|) + 10^{-8}$.
-   - Attack ballistics: $\tau_{\text{attack}} = 0.2\text{ ms}$ ($0.0002\text{ s}$).
-   - Release ballistics: $\tau_{\text{release}} = 250\text{ ms}$ ($0.25\text{ s}$).
-
-3. **Logarithmic Transfer Curve:**
-   - Threshold: $-50.0\text{ dBFS}$.
-   - Compression Ratio: $0.5994$ ($\approx 0.6$).
-   - Gain reduction: $\text{GR}_{\text{dB}} = -\text{over} \times (1.0 - 0.5994) = -\text{over} \times 0.4006$.
-
-4. **Parallel Upward Mix:**
-   - $\text{mixed} = \text{dry} \cdot (1.0 - \text{Amount}) + \text{wet} \cdot \text{Amount}$.
-
-5. **Makeup Gain (*Out Gain*):**
-   - $-50.0\text{ dB}$ to $+50.0\text{ dB}$ ($10^{\text{gain}_{\text{dB}} / 20}$).
-
-6. **Neve-Grade Rational Soft Saturator (*Soft Clipper*):**
-   - Smooth algebraic saturation curve: $y = \frac{x}{1.0 + |x|}$.
-   - Harmonically limits peaks near $0\text{ dBFS}$ with vintage transformer warmth, avoiding harsh digital clipping.
-
----
-
-## 🎛️ Original Factory Presets
-
-All 10 original 2006 Gersic Pressure factory presets have been restored, converted to Truce `.trucepreset` format, and validated:
-
-| Preset | LookAhead | Amount | Out Gain | Sonic Profile |
-| :--- | :--- | :--- | :--- | :--- |
-| **Default** | `50.0 ms` | `25.0%` | `0.0 dB` | Balanced default mastering setup |
-| **Very Light Compression** | `0.0 ms` | `12.5%` | `0.0 dB` | Subtle dynamic lift for acoustic sources |
-| **Light Compression** | `0.0 ms` | `26.25%` | `0.0 dB` | Smooth upward compression with zero latency |
-| **Medium Compression** | `0.0 ms` | `50.0%` | `0.0 dB` | Optimal density for master bus & subgroup stems |
-| **Heavy Compression** | `0.0 ms` | `73.75%` | `0.0 dB` | Dense compression exposing background textures |
-| **Squashed** | `0.0 ms` | `100.0%` | `0.0 dB` | 100% wet upward path for extreme presence |
-| **Look at that!** | `68.75 ms` | `50.0%` | `0.0 dB` | Extended lookahead with organic dynamic punch |
-| **Buk a Chuck a** | `70.0 ms` | `72.5%` | `0.0 dB` | Punchy room ambience for drum kits & rhythm stems |
-| **Number Nine Number Nine** | `50.0 ms` | `33.0%` | `0.0 dB` | Classical mastering balance |
-| **All the way up** | `0.0 ms` | `8.75%` | `0.0 dB` | Transparent mastering touch |
-
----
-
-## 🚀 Building & Installing from Source
-
-### Prerequisites
-- [Rust toolchain](https://rustup.rs/) (version 1.85+)
-- Truce CLI:
-  ```bash
-  cargo install cargo-truce
-  ```
-
-### Build & Install to Your DAW (macOS / Linux / Windows)
 ```bash
-# Clone repository
+xattr -dr com.apple.quarantine "Gersic Pressure.clap" "Gersic Pressure.vst3" "Gersic Pressure.component"
+```
+
+---
+
+## Controls
+
+| Control | Range | Default | Origin | What it does |
+| :--- | :--- | :--- | :--- | :--- |
+| **LookAhead** | 0–100 ms | 50 ms | 2006 | Delays the audio relative to the detector. Changes glide without clicks, and the latency is reported to the host for delay compensation. |
+| **Amount** | 0–100 % | 25 % | 2006 | Blend of the compressed path into the dry path. |
+| **Out Gain** | ±50 dB | 0 dB | 2006 | Gain before the soft saturator. |
+| **Color** | 0–100 % | 100 % | v2 | Saturator drive. 100 % is the original `x / (1 + |x|)`, 0 % is fully clean. |
+| **Link** | 0–100 % | 0 % | v2 | Stereo detector link. 0 % detects each channel on its own, like the original. |
+| **SC HPF** | Off, 20–500 Hz | Off | v2 | High-pass on the detector only, so bass stops driving the compression. |
+| **HQ** | on/off | on | v2 | Runs the saturator 4× oversampled with linear-phase filters. Adds 71 samples of latency, which the host compensates. |
+
+The editor follows the layout of an Ableton Live device. Drag a dial up or down to change it, hold Shift or Cmd for fine steps, and double-click to reset. The display has two views: **Transfer** shows the live static curve with the detector level as a dot, and **Activity** shows about 4 s of detector level and gain-reduction history. The meters show the gain reduction you actually hear after the blend, per channel, plus the output peak.
+
+---
+
+## How it works
+
+Upward compression is done the way the original does it, with a parallel blend. A copy of the signal is compressed above −50 dBFS and mixed back with the dry signal. Loud passages are pulled down in the wet path while quiet ones pass at unity, so after the blend the quiet material sits relatively higher. The dry path stays a clean copy of the input, so transients are kept.
+
+```
+in ─┬──────────────────────────────── lookahead delay ── dry ──┐
+    │                                                          ▼
+    └─ [SC HPF] ─ |x| ─ [link] ─ envelope ─ gain computer ─ g ─► dry·(1 − a + a·g) ─ out gain ─ soft clip ─ out
+```
+
+| Stage | Equation (from the schematic) |
+| :--- | :--- |
+| Detector | `in = |x| + 1e-8`; `c = in >= env ? c_att : c_rel`; `env = c·(env − in) + in − 1e-8` |
+| Ballistics | `c = 0.01^(1 / (t·fs))` with `t_att = 0.2 ms`, `t_rel = 250 ms` (time to fall to 1 %) |
+| Gain computer | `GR_dB = −max(env_dB + 50, 0) · (1 − 0.5994)` |
+| Blend | `dry·(1 − Amount) + dry·g·Amount` |
+| Saturator | `y = x / (1 + clip·|x|)`, with `clip = 1.0` in the original |
+
+### Reverse engineering
+
+The original `Gersic_Pressure.dll` was unpacked from UPX, and its OutSim SynthMaker 0.9.5 payload was decrypted (4-byte rotation `[2, 4, 5, 3]`) to recover `schematic.osm`. The code components (envelope follower, transfer function, delay, soft clipper) are stored there as plain text. The parameter values come from the binary parameter block: `Threshold = -50.0`, `Attack = 0.0002`, `Release = 0.25`, `Ratio = 0.5994`, `softclip = 1.0`.
+
+---
+
+## What changed in v2
+
+### Fidelity fixes (v1 did not match the original)
+
+1. **Envelope ballistics.** SynthMaker's `co_eff_calc` defines a time as *time to decay to 1 %*. The schematic even caches the coefficients it computed at 44.1 kHz (0.593257 and 0.999582), and those match `0.01^(1/(t·fs))` exactly. v1 used `exp(−1/(t·fs))`, which made the release about 4.6× slower than the original. Measured recovery from 20 dB to 3 dB of GR: **v1 1220 ms → v2 266 ms**.
+2. **Stereo detection.** The original runs its compressor on SSE lanes and has separate `reduction1` / `reduction3` outputs, which points to independent per-channel detection. v1 always linked the channels with `max(|L|, |R|)`. v2 defaults to unlinked, and **Link** brings back the v1 behaviour.
+3. **Parameter smoothing.** v1 called the smoother once per *block*, but Truce's `read()` advances it by one *sample*. Amount and gain moved in block-sized steps, and a "10 ms" smoother took about 10 blocks. v2 smooths every sample.
+4. **Latency.** v1 delayed the audio by the lookahead (50 ms by default) without telling the host, so the track played late against the rest of the session. v2 reports its latency, and it changes with LookAhead and HQ.
+5. **Lookahead changes.** v1 jumped between whole-sample delays and clicked when you moved the knob. v2 glides with Hermite interpolation and snaps to the exact sample when it settles.
+
+### Sound quality
+
+- **Alias-free saturator.** At its original setting `x/(1+|x|)` is a strong nonlinearity, and at 1× it folds harmonics back into the audio band. With HQ on, a 7 kHz sine at 0 dBFS goes from **−29.7 dB of aliasing (v1) to −65.4 dB (v2)**. The oversampler is two Kaiser-windowed half-band FIR stages (127 + 31 taps, ~100 dB stopband) with integer latency.
+- Gain computation runs every sample in the log2 domain. The original updated it every 64 samples (`hop(64)`), a 2006 CPU saving that stepped the gain.
+
+### Performance
+
+- The delay buffer is a power-of-two ring sized to the sample rate (64 KB at 48 kHz instead of a fixed 1.5 MB), so it fits in cache and wraps with a bit mask.
+- One `log2` + `exp2` per channel, skipped completely below the threshold, plus one multiply for the blend.
+- dB-to-linear for Out Gain only runs while the value moves. The FIR dot products are written so they vectorise with NEON.
+- Measured on Apple Silicon, 60 s of stereo at 44.1 kHz: v1 2568× real time, v2 1928×, v2 with HQ 175× (about 0.6 % of one core).
+
+Run the comparison yourself (the v1 DSP is kept verbatim in `examples/analyze/v1_dsp.rs`):
+
+```bash
+cargo run --release --example analyze
+```
+
+---
+
+## Factory presets
+
+All 10 original presets are included. They contain only the three original controls, so they load with the v2 extras at their defaults (Color 100 %, Link 0 %, SC HPF off), which is the original sound.
+
+| Preset | LookAhead | Amount | Out Gain |
+| :--- | :--- | :--- | :--- |
+| Default | 50.0 ms | 25.0 % | 0.0 dB |
+| Very Light Compression | 0.0 ms | 12.5 % | 0.0 dB |
+| Light Compression | 0.0 ms | 26.25 % | 0.0 dB |
+| Medium Compression | 0.0 ms | 50.0 % | 0.0 dB |
+| Heavy Compression | 0.0 ms | 73.75 % | 0.0 dB |
+| Squashed | 0.0 ms | 100.0 % | 0.0 dB |
+| Look at that! | 68.75 ms | 50.0 % | 0.0 dB |
+| Buk a Chuck a | 70.0 ms | 72.5 % | 0.0 dB |
+| Number Nine Number Nine | 50.0 ms | 33.0 % | 0.0 dB |
+| All the way up | 0.0 ms | 8.75 % | 0.0 dB |
+
+Parameter IDs are hashes of the field names, and the three original fields kept their names, so v1 projects and presets load unchanged in v2.
+
+> **Note on the saturator:** at Color 100 % (the original) the output is always shaped. A 0 dBFS peak comes out at −6 dBFS and −20 dBFS is about 0.8 dB quieter. That is the 2006 character. Lower **Color** for a cleaner output.
+
+---
+
+## Building from source
+
+Requirements: [Rust](https://rustup.rs/) 1.92+ and the Truce CLI (`cargo install cargo-truce`).
+
+```bash
 git clone https://github.com/nagualcode/gersicpressurebornagain.git
 cd gersicpressurebornagain
 
-# Build and install CLAP, VST3, and AU directly into your user plugin paths
-cargo truce install --clap --vst3 --au2 --user
+cargo truce install --clap --vst3 --au2 --user    # build + install into your user plugin folders
+cargo truce run                                   # standalone, no DAW needed
+cargo test --release                              # DSP, real-time-safety, preset and GUI snapshot tests
+cargo truce package --formats clap,vst3,au2 --user --host-only   # .pkg installer in target/dist
 ```
 
-The plugin will appear in your DAW under the **Jardim Sonoro** manufacturer category.
-
-### Run as Standalone App (No DAW required)
-```bash
-cargo run --bin gersic-pressure-standalone --features standalone
-```
-
-### Run Real-Time Safety & DSP Test Suite
-```bash
-cargo test
-```
-*Enforces real-time memory-safety verification (`enable_rt_paranoid!`) and bit-exact preset round-trips.*
-
----
-
-## 📂 Project Structure
+## Project structure
 
 ```
-gersicpressurebornagain/
-├── Cargo.toml               # Package configuration & Truce audio dependencies
-├── truce.toml               # Plugin metadata (Vendor: Jardim Sonoro, CLAP, VST3, AU)
-├── LICENSE                  # MIT License
-├── README.md                # Comprehensive documentation
 ├── src/
-│   ├── lib.rs               # Parameter declarations, UI layout & Truce PluginLogic
-│   ├── dsp.rs               # Pure DSP core (delay buffer, detector, saturator)
-│   └── main.rs              # Standalone executable runner
-├── presets/                 # 10 original factory presets (.trucepreset)
-├── tests/
-│   └── presets.rs           # Preset integrity and boundary unit tests
-├── bundles/                 # Pre-compiled bundles (CLAP, VST3, AU)
-└── legacy/                  # 2006 original artifacts (x86 DLLs, schematic.osm, manual)
+│   ├── lib.rs            # parameters, block processing, meters, latency
+│   ├── dsp.rs            # detector, gain computer, lookahead, saturator
+│   ├── oversampling.rs   # 4x linear-phase half-band oversampler
+│   ├── editor.rs         # egui editor (Live-style device)
+│   └── main.rs           # standalone runner
+├── examples/analyze/     # v1 vs v2 measurements (release, aliasing, CPU)
+├── presets/              # 10 original factory presets
+├── tests/presets.rs      # preset integrity tests
+├── screenshots/          # GUI snapshot baseline
+├── assets/               # plugin icons
+└── legacy/               # original 2006 artifacts (DLL, schematic, manual)
 ```
 
----
+## Credits & license
 
-## 📜 Credits & License
-
-- **Original Algorithm & Concept:** Tom & Jeremy Gersic (2006).
-- **Reverse Engineering & Rust Recreation:** [nagualcode](https://github.com/nagualcode) (2026).
-- **Vendor / Publisher:** Jardim Sonoro.
-- **License:** Open source under the [MIT License](LICENSE).
+- **Original algorithm & concept:** Tom & Jeremy Gersic (2006).
+- **Reverse engineering & Rust recreation:** [nagualcode](https://github.com/nagualcode) (2026).
+- **Vendor:** Jardim Sonoro.
+- The recreation's source code is released under the [MIT License](LICENSE). The files in `legacy/` are the original authors' work and are included for research and reference only.

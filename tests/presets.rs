@@ -12,7 +12,7 @@ fn library() -> Vec<truce_build::presets::AuthoredPreset> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("presets");
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let annotations = read_param_annotations(
-        &truce_build::target_dir(&workspace_root)
+        &truce_build::target_dir(workspace_root)
             .join("lv2-meta")
             .join("gersic-pressure"),
     );
@@ -27,8 +27,16 @@ fn library() -> Vec<truce_build::presets::AuthoredPreset> {
 #[test]
 fn library_has_one_default_and_unique_names() {
     let presets = library();
-    assert_eq!(presets.len(), 10, "Expected all 10 original factory presets");
-    assert_eq!(presets.iter().filter(|p| p.meta.default).count(), 1, "Exactly one default preset");
+    assert_eq!(
+        presets.len(),
+        10,
+        "Expected all 10 original factory presets"
+    );
+    assert_eq!(
+        presets.iter().filter(|p| p.meta.default).count(),
+        1,
+        "Exactly one default preset"
+    );
 
     let names: HashSet<&str> = presets.iter().map(|p| p.meta.name.as_str()).collect();
     assert_eq!(names.len(), presets.len(), "duplicate preset display name");

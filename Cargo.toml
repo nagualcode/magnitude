@@ -1,9 +1,9 @@
 [package]
 name = "gersic-pressure"
-version = "1.0.0"
+version = "2.0.0"
 edition = "2024"
 authors = ["Jeremy Gersic", "Tom Gersic", "nagualcode"]
-description = "Faithful recreation of Tom & Jeremy Gersic's iconic PRESSURE Upward Compressor with Truce audio framework"
+description = "Recreation and modernisation of Tom & Jeremy Gersic's 2006 PRESSURE upward compressor, built with Truce"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/nagualcode/gersicpressurebornagain"
@@ -34,8 +34,8 @@ rt-paranoid = ["truce/rt-paranoid"]
 truce = { version = "6.3" }
 truce-core = { version = "6.3" }
 truce-params = { version = "6.3" }
-truce-gui-types = { version = "6.3" }
-truce-gui = { version = "6.3", features = ["cpu"] }
+truce-egui = { version = "6.3" }
+egui = "0.34"
 truce-loader = { version = "6.3" }
 truce-clap = { version = "6.3", optional = true }
 truce-vst3 = { version = "6.3", optional = true }
