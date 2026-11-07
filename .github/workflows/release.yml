@@ -1,0 +1,217 @@
+name: Release
+
+# Builds Magnitude for Apple Silicon, Windows (x86_64) and Linux (x86_64),
+# uploads one archive per platform as a workflow artifact, and — when the run
+# comes from a `v*` tag — attaches those archives to the GitHub Release.
+#
+# Manual runs (workflow_dispatch) build and upload artifacts only, so the
+# matrix can be exercised without cutting a release.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  TRUCE_CLI_VERSION: "6.3.0"
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each runner builds natively for its own architecture: macos-15 is
+          # Apple Silicon, the other two are x86_64. `cargo truce build` is
+          # host-native here on purpose — its AU v2 step looks in
+          # target/release/, so passing --target makes --au2 fail.
+          - label: macos-arm64
+            os: macos-15
+            # AU v2 is macOS-only; CLAP + VST3 + AU covers every macOS host.
+            formats: "--clap --vst3 --au2"
+          - label: windows-x86_64
+            os: windows-2022
+            formats: "--clap --vst3"
+          - label: linux-x86_64
+            os: ubuntu-24.04
+            formats: "--clap --vst3"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # egui/baseview (X11 + OpenGL) and cpal (ALSA) need their dev packages.
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libx11-dev \
+            libxcb1-dev \
+            libxcb-icccm4-dev \
+            libxcb-util-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.label }}
+
+      - name: Cache cargo-truce binary
+        id: cache-truce
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-truce
+            ~/.cargo/bin/cargo-truce.exe
+          key: cargo-truce-${{ env.TRUCE_CLI_VERSION }}-${{ matrix.os }}
+
+      - name: Install cargo-truce
+        if: steps.cache-truce.outputs.cache-hit != 'true'
+        run: cargo install cargo-truce --version ${{ env.TRUCE_CLI_VERSION }} --locked
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
+          else
+            version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)+$(git rev-parse --short HEAD)"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Building Magnitude ${version}"
+
+      - name: Build plugin bundles
+        shell: bash
+        run: cargo truce build ${{ matrix.formats }} --verbose
+
+      - name: Build standalone host
+        shell: bash
+        run: |
+          cargo build --release --locked \
+            --no-default-features --features standalone \
+            --bin magnitude-standalone
+
+      - name: Stage release payload
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="Magnitude-${{ steps.version.outputs.version }}-${{ matrix.label }}"
+          stage="staging/${name}"
+          rm -rf staging
+          mkdir -p "${stage}"
+
+          # Bundles (with the factory presets already inside) land directly in
+          # target/bundles/ for a host-native build.
+          found=0
+          while IFS= read -r -d '' artifact; do
+            cp -R "${artifact}" "${stage}/"
+            found=$((found + 1))
+          done < <(find target/bundles -maxdepth 1 \
+            \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' \) \
+            -print0)
+          if [ "${found}" -eq 0 ]; then
+            echo "::error::no plugin bundles found under target/bundles"
+            find target/bundles -maxdepth 3 || true
+            exit 1
+          fi
+
+          # Standalone host binary.
+          for candidate in \
+            "target/release/magnitude-standalone" \
+            "target/release/magnitude-standalone.exe"; do
+            if [ -f "${candidate}" ]; then
+              cp "${candidate}" "${stage}/"
+            fi
+          done
+
+          cp -R presets "${stage}/presets"
+          cp README.md LICENSE "${stage}/"
+
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          echo "stage=${stage}" >> "$GITHUB_OUTPUT"
+          ls -la "${stage}"
+
+      # ditto keeps bundle structure, symlinks and the ad-hoc code signature intact.
+      - name: Archive (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent \
+            "${{ steps.stage.outputs.stage }}" \
+            "dist/${{ steps.stage.outputs.name }}.zip"
+
+      - name: Archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "${{ steps.stage.outputs.stage }}" `
+            -DestinationPath "dist/${{ steps.stage.outputs.name }}.zip"
+
+      - name: Archive (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          tar -czf "dist/${{ steps.stage.outputs.name }}.tar.gz" \
+            -C staging "${{ steps.stage.outputs.name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.stage.outputs.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          ls -la dist
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" dist/* --clobber
+          else
+            gh release create "${tag}" dist/* \
+              --title "Magnitude ${tag}" \
+              --generate-notes
+          fi

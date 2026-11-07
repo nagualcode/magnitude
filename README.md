@@ -4,12 +4,13 @@
 [![Framework: Truce](https://img.shields.io/badge/Framework-Truce%20v6.3-purple.svg)](https://github.com/truce-audio/truce)
 [![Rust: 2024](https://img.shields.io/badge/Rust-2024%20Edition-orange.svg)](https://www.rust-lang.org/)
 [![Formats: CLAP | VST3 | AU](https://img.shields.io/badge/Formats-CLAP%20%7C%20VST3%20%7C%20AU-brightgreen.svg)]()
+[![Platforms: macOS | Windows | Linux](https://img.shields.io/badge/Platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)]()
 [![GitHub Release](https://img.shields.io/github/v/release/nagualcode/magnitude?color=blue)](https://github.com/nagualcode/magnitude/releases)
 
 > *"Pressure Mastering Compressor uses a technique called upward compression; it increases the level of quiet portions in a mix without reducing the level of attack transients like a traditional compressor."*
 > — **Jeremy Gersic, 2006**
 
-**Magnitude** is an upward mastering compressor for macOS (CLAP, VST3, AU). It is descended from the 2006 freeware VST **PRESSURE Upward Compressor** by Tom & Jeremy Gersic: the DSP was reverse engineered from the original SynthMaker schematic and rebuilt in Rust on the [Truce](https://github.com/truce-audio/truce) plugin framework. It reproduces the original sound by default, with fidelity fixes (see [What changed in v2](#what-changed-in-v2)) and optional modern features.
+**Magnitude** is an upward mastering compressor for macOS, Windows and Linux (CLAP and VST3 everywhere, plus AU on macOS). It is descended from the 2006 freeware VST **PRESSURE Upward Compressor** by Tom & Jeremy Gersic: the DSP was reverse engineered from the original SynthMaker schematic and rebuilt in Rust on the [Truce](https://github.com/truce-audio/truce) plugin framework. It reproduces the original sound by default, with fidelity fixes (see [What changed in v2](#what-changed-in-v2)) and optional modern features.
 
 
 ![Magnitude editor](screenshots/magnitude_default_macos.png)
@@ -17,6 +18,30 @@
 
 
 
+
+## Installation
+
+Prebuilt binaries for each tagged release are on the [Releases page](https://github.com/nagualcode/magnitude/releases). Every archive also carries the standalone host (`magnitude-standalone`), the 10 factory presets and the licence.
+
+| Platform | Archive | Contents |
+| :--- | :--- | :--- |
+| macOS (Apple Silicon) | `Magnitude-<version>-macos-arm64.zip` | `Magnitude.clap`, `Magnitude.vst3`, `Magnitude.component` |
+| Windows (x86_64) | `Magnitude-<version>-windows-x86_64.zip` | `Magnitude.clap`, `Magnitude.vst3` |
+| Linux (x86_64) | `Magnitude-<version>-linux-x86_64.tar.gz` | `Magnitude.clap`, `Magnitude.vst3` |
+
+Unpack the archive and copy each bundle into the folder your host scans:
+
+| | CLAP | VST3 |
+| :--- | :--- | :--- |
+| **macOS** | `~/Library/Audio/Plug-Ins/CLAP` | `~/Library/Audio/Plug-Ins/VST3` |
+| **Windows** | `%COMMONPROGRAMFILES%\CLAP` | `%COMMONPROGRAMFILES%\VST3` |
+| **Linux** | `~/.clap` | `~/.vst3` |
+
+On macOS, `Magnitude.component` goes to `~/Library/Audio/Plug-Ins/Components`. The bundles are ad-hoc signed, not notarised, so the first load may need an allow in **System Settings → Privacy & Security**. A `.pkg` installer can be built locally with `cargo truce package` (see [Building from source](#building-from-source)).
+
+The Apple Silicon build is arm64-only; Intel Macs need a local build. The Linux archives are built on Ubuntu 24.04 (glibc 2.39), so older distributions need a local build too.
+
+---
 
 ## Controls
 
@@ -328,6 +353,10 @@ cargo test --release                              # DSP, real-time-safety, prese
 cargo truce package --formats clap,vst3,au2 --user --host-only   # .pkg installer in target/dist
 ```
 
+AU v2 is macOS-only, so on Windows and Linux the format flags are `--clap --vst3`. `cargo truce package` builds an installer for the host platform (`.pkg` on macOS, `.exe` on Windows).
+
+Releases are automated: pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the three archives above on `macos-15`, `windows-2022` and `ubuntu-24.04` and attaches them to the GitHub Release. The same workflow can be run manually from the Actions tab to produce the archives as build artifacts without publishing a release.
+
 ## Project structure
 
 ```
@@ -343,6 +372,7 @@ cargo truce package --formats clap,vst3,au2 --user --host-only   # .pkg installe
 ├── screenshots/          # GUI snapshot baseline
 ├── assets/               # plugin icons
 ├── vendor/truce-clap/    # Truce CLAP wrapper with two spec fixes (see PATCHED.md)
+├── .github/workflows/    # release.yml: macOS/Windows/Linux binaries on each v* tag
 └── legacy/               # original 2006 artifacts (DLL, schematic, manual)
 ```
 
