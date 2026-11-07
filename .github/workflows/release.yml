@@ -123,14 +123,21 @@ jobs:
           rm -rf staging
           mkdir -p "${stage}"
 
-          # Bundles (with the factory presets already inside) land directly in
-          # target/bundles/ for a host-native build.
+          # Bundles land directly in target/bundles/ for a host-native build.
+          # On macOS the CLAP factory presets sit inside the bundle; on Windows
+          # and Linux the .clap is a single file, so cargo-truce emits them into
+          # a sibling `Magnitude.presets/` directory that the CLAP wrapper
+          # declares to the host — it has to travel with the bundle.
           found=0
           while IFS= read -r -d '' artifact; do
             cp -R "${artifact}" "${stage}/"
-            found=$((found + 1))
+            case "${artifact}" in
+              *.presets) ;;
+              *) found=$((found + 1)) ;;
+            esac
           done < <(find target/bundles -maxdepth 1 \
-            \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' \) \
+            \( -name '*.clap' -o -name '*.vst3' -o -name '*.component' \
+               -o -name '*.presets' \) \
             -print0)
           if [ "${found}" -eq 0 ]; then
             echo "::error::no plugin bundles found under target/bundles"

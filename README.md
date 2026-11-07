@@ -26,8 +26,8 @@ Prebuilt binaries for each tagged release are on the [Releases page](https://git
 | Platform | Archive | Contents |
 | :--- | :--- | :--- |
 | macOS (Apple Silicon) | `Magnitude-<version>-macos-arm64.zip` | `Magnitude.clap`, `Magnitude.vst3`, `Magnitude.component` |
-| Windows (x86_64) | `Magnitude-<version>-windows-x86_64.zip` | `Magnitude.clap`, `Magnitude.vst3` |
-| Linux (x86_64) | `Magnitude-<version>-linux-x86_64.tar.gz` | `Magnitude.clap`, `Magnitude.vst3` |
+| Windows (x86_64) | `Magnitude-<version>-windows-x86_64.zip` | `Magnitude.clap`, `Magnitude.presets/`, `Magnitude.vst3` |
+| Linux (x86_64) | `Magnitude-<version>-linux-x86_64.tar.gz` | `Magnitude.clap`, `Magnitude.presets/`, `Magnitude.vst3` |
 
 Unpack the archive and copy each bundle into the folder your host scans:
 
@@ -37,7 +37,7 @@ Unpack the archive and copy each bundle into the folder your host scans:
 | **Windows** | `%COMMONPROGRAMFILES%\CLAP` | `%COMMONPROGRAMFILES%\VST3` |
 | **Linux** | `~/.clap` | `~/.vst3` |
 
-On macOS, `Magnitude.component` goes to `~/Library/Audio/Plug-Ins/Components`. The bundles are ad-hoc signed, not notarised, so the first load may need an allow in **System Settings → Privacy & Security**. A `.pkg` installer can be built locally with `cargo truce package` (see [Building from source](#building-from-source)).
+On Windows and Linux the `.clap` is a single file, so the factory presets ship beside it in `Magnitude.presets/`: copy that directory into the CLAP folder too, next to `Magnitude.clap`, or the plugin loads with no factory presets. On macOS they are already inside the bundle, and `Magnitude.component` goes to `~/Library/Audio/Plug-Ins/Components`. The bundles are ad-hoc signed, not notarised, so the first load may need an allow in **System Settings → Privacy & Security**. A `.pkg` installer can be built locally with `cargo truce package` (see [Building from source](#building-from-source)).
 
 The Apple Silicon build is arm64-only; Intel Macs need a local build. The Linux archives are built on Ubuntu 24.04 (glibc 2.39), so older distributions need a local build too.
 
