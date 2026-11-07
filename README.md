@@ -1,3 +1,7 @@
+<a class="bmc" href="https://buymeacoffee.com/jardimsonoro" rel="noopener">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60" loading="lazy">
+</a>
+
 # Magnitude
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
