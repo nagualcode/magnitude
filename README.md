@@ -11,45 +11,12 @@
 
 **Magnitude** is an upward mastering compressor for macOS (CLAP, VST3, AU). It is descended from the 2006 freeware VST **PRESSURE Upward Compressor** by Tom & Jeremy Gersic: the DSP was reverse engineered from the original SynthMaker schematic and rebuilt in Rust on the [Truce](https://github.com/truce-audio/truce) plugin framework. It reproduces the original sound by default, with fidelity fixes (see [What changed in v2](#what-changed-in-v2)) and optional modern features.
 
-Until v2.0.1 the project was called **Gersic Pressure: Born Again**. See [Upgrading from Gersic Pressure](#upgrading-from-gersic-pressure). The repository was renamed from `gersicpressurebornagain` to `magnitude`; old links redirect.
 
 ![Magnitude editor](screenshots/magnitude_default_macos.png)
 
-Published under the vendor **Jardim Sonoro** in your DAW.
 
----
 
-## Download (macOS, Apple Silicon)
 
-Get the latest build from [Releases](https://github.com/nagualcode/magnitude/releases):
-
-- `magnitude-<ver>-macos-arm64.pkg`: installer (CLAP, VST3, AU v2 + factory presets, user scope, no admin prompt).
-- `magnitude-<ver>-macos-arm64-bundles.zip`: the raw `.clap`, `.vst3` and `.component` bundles.
-
-The binaries are **arm64 only** (Apple Silicon). Intel Macs need to build from source.
-
-The builds are ad-hoc signed and **not notarized**. If macOS blocks the installer, right-click → *Open*. If you use the zip, clear the quarantine flag before copying the bundles:
-
-```bash
-xattr -dr com.apple.quarantine "Magnitude.clap" "Magnitude.vst3" "Magnitude.component"
-```
-
-### Upgrading from Gersic Pressure
-
-Magnitude keeps the same plugin identity as Gersic Pressure (CLAP/VST3 ids, the AU code `aufx PR3S Jrdm` and all parameter ids). Projects and presets saved with Gersic Pressure v1/v2 open in Magnitude unchanged, and the DAW simply shows the new name.
-
-Because the identity is shared, **remove the old bundles** so your DAW doesn't find two plugins with the same id, then rescan:
-
-```bash
-rm -rf ~/Library/Audio/Plug-Ins/CLAP/"Gersic Pressure.clap" \
-       ~/Library/Audio/Plug-Ins/VST3/"Gersic Pressure.vst3" \
-       ~/Library/Audio/Plug-Ins/Components/"Gersic Pressure.component" \
-       ~/Library/Audio/Presets/"Jardim Sonoro"/"Gersic Pressure"
-```
-
-(If you installed system-wide, the same names live under `/Library/Audio/Plug-Ins/`.)
-
----
 
 ## Controls
 
